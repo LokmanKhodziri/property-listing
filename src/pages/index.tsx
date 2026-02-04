@@ -1,48 +1,28 @@
-import axios from 'axios';
+import { Container, Grid, Typography } from '@mui/material';
+import PropertryCard from '@/components/PropertyCard';
 
-export async function getServerSideProps() {
-  try {
-    const response = await axios.post(
-      'https://agents.propertygenie.com.my/api/properties-mock',
-      {
-        categories: [],
-        types: [],
-      },
-      {
-        params: {
-          page: 1,
-          sort: '-createdAt',
-        },
-      }
-    );
-
-    return {
-      props: {
-        properties: response.data?.data || [],
-        pagination: response.data?.meta || null,
-      },
-    };
-  } catch (error) {
-    console.error(error);
-
-    return {
-      props: {
-        properties: [],
-        error: true,
-      },
-    };
-  }
-}
-
-export default function Home({ properties, error }) {
+export default function Home({ properties = [], error }) {
   if (error) {
-    return <div>Failed to load properties</div>;
+    return <Typography variant="h6">Failed to load properties</Typography>;
+  }
+
+  if (!properties.length) {
+    return <Typography variant="h6">No properties available</Typography>;
   }
 
   return (
-    <div>
-      <h1>Property Listings</h1>
-      <pre>{JSON.stringify(properties[0], null, 2)}</pre>
-    </div>
+    <Container>
+      <Typography variant="h4" gutterBottom>
+        Property Listings
+      </Typography>
+
+      <Grid container spacing={4}>
+        {properties.map((property) => (
+          <Grid item key={property.id} xs={12} sm={6} md={4}>
+            <PropertryCard property={property} />
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 }
