@@ -40,7 +40,18 @@ export async function getServerSideProps(context: any) {
     process.env.NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT;
   const { page = "1", sort = "-price" } = context.query || {};
 
-  const url = `${endpointBase}?page=${page}&sort=${sort}`;
+  let url: string;
+  try {
+    const u = new URL(endpointBase);
+    u.searchParams.set("page", String(page));
+    u.searchParams.set("sort", String(sort));
+    url = u.toString();
+  } catch (e) {
+    url = `${endpointBase}${endpointBase && endpointBase.includes("?") ? "&" : "?"}page=${encodeURIComponent(
+      String(page),
+    )}&sort=${encodeURIComponent(String(sort))}`;
+  }
+
   console.log("Fetching properties from", url);
 
   try {
@@ -50,10 +61,16 @@ export async function getServerSideProps(context: any) {
       body: JSON.stringify({}),
     });
 
-    const data = await res.json();
-    console.log("API response (assume data.data):", data);
+    console.log("API response status:", res.status);
+    if (!res.ok) {
+      const text = await res.text();
+      console.log("API returned non-ok response:", text);
+      return { props: { properties: [], error: true } };
+    }
 
-    // Junior: try multiple common shapes
+    const data = await res.json();
+    console.log("API response (json):", data);
+
     let properties: any = [];
     if (Array.isArray(data)) properties = data;
     else if (Array.isArray(data.items)) properties = data.items;
