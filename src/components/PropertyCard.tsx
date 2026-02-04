@@ -1,7 +1,7 @@
 import { Card, CardContent, CardMedia, Typography, Stack, Chip } from "@mui/material";
 import {formatPrice} from "@/utils/formatPrice";
 
-export default function PropertryCard({ property }) {
+export default function PropertyCard({ property }: { property: any }) {
     const { name, price, state, city, types, images } = property;
 
     const imageUrl = images?.[0] || '/placeholder.jpg';

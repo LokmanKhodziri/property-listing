@@ -1,7 +1,9 @@
 import { Container, Grid, Typography } from '@mui/material';
-import PropertryCard from '@/components/PropertyCard';
+import PropertyCard from '@/components/PropertyCard';
 
-export default function Home({ properties = [], error }) {
+const GridAny = Grid as any;
+
+export default function Home({ properties = [], error }: { properties?: any[]; error?: boolean }) {
   if (error) {
     return <Typography variant="h6">Failed to load properties</Typography>;
   }
@@ -16,13 +18,41 @@ export default function Home({ properties = [], error }) {
         Property Listings
       </Typography>
 
-      <Grid container spacing={4}>
+      <GridAny container spacing={4}>
         {properties.map((property) => (
-          <Grid item key={property.id} xs={12} sm={6} md={4}>
-            <PropertryCard property={property} />
-          </Grid>
+          <GridAny key={property.id} xs={12} sm={6} md={4} component={"div"}>
+            <PropertyCard property={property} />
+          </GridAny>
         ))}
-      </Grid>
+      </GridAny>
     </Container>
   );
+}
+
+export async function getServerSideProps() {
+  const endpoint = process.env.PROPERTY_LISTING_ENDPOINT || process.env.NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT;
+
+  if (!endpoint) {
+    return { props: { properties: [], error: true } };
+  }
+
+  try {
+    const res = await fetch(endpoint as string);
+    if (!res.ok) {
+      return { props: { properties: [], error: true } };
+    }
+
+    const data = await res.json();
+
+    let properties = [];
+    if (Array.isArray(data)) properties = data;
+    else if (Array.isArray(data.data)) properties = data.data;
+    else if (Array.isArray(data.results)) properties = data.results;
+    else if (Array.isArray(data.items)) properties = data.items;
+    else if (Array.isArray(data.properties)) properties = data.properties;
+
+    return { props: { properties } };
+  } catch (err) {
+    return { props: { properties: [], error: true } };
+  }
 }
