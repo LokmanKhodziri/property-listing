@@ -1,25 +1,31 @@
-import { Container, Grid, Typography } from '@mui/material';
-import PropertyCard from '@/components/PropertyCard';
+import { Container, Grid, Typography } from "@mui/material";
+import PropertyCard from "@/components/PropertyCard";
 
 const GridAny = Grid as any;
 
-export default function Home({ properties = [], error }: { properties?: any[]; error?: boolean }) {
+export default function Home(props: any) {
+  // Junior dev style: very loose types and lots of console logs
+  console.log("Home props:", props);
+  const { properties = [], error } = props;
+
   if (error) {
-    return <Typography variant="h6">Failed to load properties</Typography>;
+    console.log("Error while loading properties");
+    return <Typography variant='h6'>Failed to load properties</Typography>;
   }
 
-  if (!properties.length) {
-    return <Typography variant="h6">No properties available</Typography>;
+  if (!properties || !properties.length) {
+    console.log("No properties found");
+    return <Typography variant='h6'>No properties available</Typography>;
   }
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant='h4' gutterBottom>
         Property Listings
       </Typography>
 
       <GridAny container spacing={4}>
-        {properties.map((property) => (
+        {properties.map((property: any) => (
           <GridAny key={property.id} xs={12} sm={6} md={4} component={"div"}>
             <PropertyCard property={property} />
           </GridAny>
@@ -29,30 +35,37 @@ export default function Home({ properties = [], error }: { properties?: any[]; e
   );
 }
 
-export async function getServerSideProps() {
-  const endpoint = process.env.PROPERTY_LISTING_ENDPOINT || process.env.NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT;
+export async function getServerSideProps(context: any) {
+  // Naive implementation that a junior dev might write
+  const endpointBase =
+    process.env.PROPERTY_LISTING_ENDPOINT ||
+    process.env.NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT;
+  const { page = "1", sort = "-price" } = context.query || {};
 
-  if (!endpoint) {
-    return { props: { properties: [], error: true } };
-  }
+  // Simple string concat, no validation
+  const url = `${endpointBase}?page=${page}&sort=${sort}`;
+  console.log("Fetching properties from", url);
 
   try {
-    const res = await fetch(endpoint as string);
-    if (!res.ok) {
-      return { props: { properties: [], error: true } };
-    }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}), // junior: always sending empty body
+    });
 
+    // No check for res.ok; just try to parse JSON
     const data = await res.json();
+    console.log("API response (assume data.data):", data);
 
-    let properties = [];
-    if (Array.isArray(data)) properties = data;
-    else if (Array.isArray(data.data)) properties = data.data;
-    else if (Array.isArray(data.results)) properties = data.results;
-    else if (Array.isArray(data.items)) properties = data.items;
-    else if (Array.isArray(data.properties)) properties = data.properties;
+    // Junior assumption: the API returns { data: [] }
+    let properties: any = data && data.data ? data.data : [];
+
+    // TODO: handle pagination, filters, and other shapes
 
     return { props: { properties } };
-  } catch (err) {
+  } catch (error) {
+    console.log("Fetch error:", error);
+    // naive error handling
     return { props: { properties: [], error: true } };
   }
 }
