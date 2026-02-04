@@ -9,7 +9,6 @@ import {
 import { formatPrice } from "@/utils/formatPrice";
 
 export default function PropertyCard({ property }: { property: any }) {
-  // Junior dev: quick and dirty logging
   console.log("PropertyCard -> property:", property);
   property = property || {};
   // TODO: validate property fields before using them
