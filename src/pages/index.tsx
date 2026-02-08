@@ -6,7 +6,11 @@ import {
   Typography,
   TextField,
   Button,
+  FormControl,
   FormControlLabel,
+  InputLabel,
+  Select,
+  MenuItem,
   Radio,
   RadioGroup,
   Box,
@@ -25,6 +29,14 @@ const PROPERTY_CATEGORIES = [
   { value: "others", label: "Others" },
 ];
 
+// sort options for dropdown
+const SORT_OPTIONS = [
+  { value: "-price", label: "Price (high to low)" },
+  { value: "price", label: "Price (low to high)" },
+  { value: "-createdAt", label: "Newest first" },
+  { value: "createdAt", label: "Oldest first" },
+];
+
 export default function Home(props: any) {
   const router = useRouter();
   const { properties = [], error } = props;
@@ -33,6 +45,7 @@ export default function Home(props: any) {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("-price");
   const [currentPage, setCurrentPage] = useState(1);
 
   // sync form from url when user go back/forward or apply filter
@@ -41,6 +54,7 @@ export default function Home(props: any) {
     setMinPrice((q.minPrice as string) || "");
     setMaxPrice((q.maxPrice as string) || "");
     setCategory((q.category as string) || "all");
+    setSort((q.sort as string) || "-price");
     setCurrentPage(parseInt((q.page as string) || "1", 10));
   }, [router.query]);
 
@@ -53,6 +67,17 @@ export default function Home(props: any) {
     if (minPrice) query.minPrice = minPrice;
     if (maxPrice) query.maxPrice = maxPrice;
     if (category && category !== "all") query.category = category;
+    router.push({ pathname: "/", query });
+  };
+
+  // when user changes sort we go to page 1 so results make sense
+  const handleSortChange = (newSort: string) => {
+    setSort(newSort);
+    const query: Record<string, string> = {
+      ...router.query,
+      page: "1",
+      sort: newSort,
+    } as Record<string, string>;
     router.push({ pathname: "/", query });
   };
 
@@ -81,6 +106,21 @@ export default function Home(props: any) {
           Filters
         </Typography>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel id="sort-label">Sort by</InputLabel>
+            <Select
+              labelId="sort-label"
+              label="Sort by"
+              value={sort}
+              onChange={(e) => handleSortChange(e.target.value)}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="Min price"
             type="number"
