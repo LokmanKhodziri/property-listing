@@ -6,17 +6,24 @@ import {
   Typography,
   TextField,
   Button,
-  FormGroup,
   FormControlLabel,
-  Checkbox,
+  Radio,
+  RadioGroup,
   Box,
 } from "@mui/material";
 import PropertyCard from "@/components/PropertyCard";
 
 const GridAny = Grid as any;
 
-// property types we can filter by (could come from API later)
-const PROPERTY_TYPES = ["House", "Apartment", "Condo", "Land"];
+// category options for filter
+const PROPERTY_CATEGORIES = [
+  { value: "all", label: "All Properties" },
+  { value: "residential", label: "Residential" },
+  { value: "commercial", label: "Commercial" },
+  { value: "agricultural", label: "Agricultural" },
+  { value: "industrial", label: "Industrial" },
+  { value: "others", label: "Others" },
+];
 
 export default function Home(props: any) {
   const router = useRouter();
@@ -25,20 +32,19 @@ export default function Home(props: any) {
   // local state for the filter form
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [category, setCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // when router query changes (e.g. after navigation), sync our form state from URL
+  // sync form from url when user go back/forward or apply filter
   useEffect(() => {
     const q = router.query;
     setMinPrice((q.minPrice as string) || "");
     setMaxPrice((q.maxPrice as string) || "");
-    const typesParam = (q.types as string) || "";
-    setSelectedTypes(typesParam ? typesParam.split(",").filter(Boolean) : []);
+    setCategory((q.category as string) || "all");
     setCurrentPage(parseInt((q.page as string) || "1", 10));
   }, [router.query]);
 
-  // apply filters - reset to page 1 so no pagination bug
+  // apply filters and go back to page 1
   const handleApplyFilters = () => {
     const query: Record<string, string> = {
       page: "1",
@@ -46,20 +52,10 @@ export default function Home(props: any) {
     };
     if (minPrice) query.minPrice = minPrice;
     if (maxPrice) query.maxPrice = maxPrice;
-    if (selectedTypes.length) query.types = selectedTypes.join(",");
+    if (category && category !== "all") query.category = category;
     router.push({ pathname: "/", query });
   };
 
-  // when user toggles a property type checkbox
-  const handleTypeChange = (type: string, checked: boolean) => {
-    if (checked) {
-      setSelectedTypes([...selectedTypes, type]);
-    } else {
-      setSelectedTypes(selectedTypes.filter((t) => t !== type));
-    }
-  };
-
-  // pagination - keep current filters, just change page
   const goToPage = (page: number) => {
     if (page < 1) return;
     const query: Record<string, string> = {
@@ -103,22 +99,22 @@ export default function Home(props: any) {
           />
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-              Property type
+              Property Category
             </Typography>
-            <FormGroup row>
-              {PROPERTY_TYPES.map((type) => (
+            <RadioGroup
+              row
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              {PROPERTY_CATEGORIES.map((opt) => (
                 <FormControlLabel
-                  key={type}
-                  control={
-                    <Checkbox
-                      checked={selectedTypes.includes(type)}
-                      onChange={(e) => handleTypeChange(type, e.target.checked)}
-                    />
-                  }
-                  label={type}
+                  key={opt.value}
+                  value={opt.value}
+                  control={<Radio size="small" />}
+                  label={opt.label}
                 />
               ))}
-            </FormGroup>
+            </RadioGroup>
           </Box>
           <Button variant="contained" onClick={handleApplyFilters}>
             Apply filters
@@ -138,7 +134,7 @@ export default function Home(props: any) {
             ))}
           </GridAny>
 
-          {/* pagination - prev/next so we dont need total count from API */}
+          {/* prev next buttons */}
           <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mt: 3 }}>
             <Button
               variant="outlined"
@@ -162,34 +158,31 @@ export async function getServerSideProps(context: any) {
   const endpointBase =
     process.env.PROPERTY_LISTING_ENDPOINT ||
     process.env.NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT;
-  const { page = "1", sort = "-price", minPrice, maxPrice, types } = context.query || {};
+  const { page = "1", sort = "-price", minPrice, maxPrice, category } = context.query || {};
 
+  // api wants page and sort in url only
   let url: string;
   try {
     const u = new URL(endpointBase);
     u.searchParams.set("page", String(page));
     u.searchParams.set("sort", String(sort));
-    if (minPrice) u.searchParams.set("minPrice", String(minPrice));
-    if (maxPrice) u.searchParams.set("maxPrice", String(maxPrice));
-    if (types) u.searchParams.set("types", String(types));
     url = u.toString();
   } catch (e) {
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("sort", String(sort));
-    if (minPrice) params.set("minPrice", String(minPrice));
-    if (maxPrice) params.set("maxPrice", String(maxPrice));
-    if (types) params.set("types", String(types));
-    url = `${endpointBase}${endpointBase && endpointBase.includes("?") ? "&" : "?"}${params.toString()}`;
+    url = `${endpointBase}${endpointBase && endpointBase.includes("?") ? "&" : "?"}page=${encodeURIComponent(String(page))}&sort=${encodeURIComponent(String(sort))}`;
   }
 
+  // filters go in body
   const body: Record<string, unknown> = {
-    page: Number(page) || 1,
-    sort: String(sort),
+    section: "sale",
   };
-  if (minPrice) body.minPrice = Number(minPrice);
-  if (maxPrice) body.maxPrice = Number(maxPrice);
-  if (types) body.types = String(types).split(",").filter(Boolean);
+  const categoryVal = category && String(category).toLowerCase();
+  if (categoryVal && categoryVal !== "all") {
+    body.categories = [categoryVal];
+  }
+  const minPriceNum = minPrice ? parseInt(String(minPrice), 10) : undefined;
+  const maxPriceNum = maxPrice ? parseInt(String(maxPrice), 10) : undefined;
+  if (minPriceNum != null && !Number.isNaN(minPriceNum)) body.minPrice = minPriceNum;
+  if (maxPriceNum != null && !Number.isNaN(maxPriceNum)) body.maxPrice = maxPriceNum;
 
   try {
     const res = await fetch(url, {
