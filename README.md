@@ -1,8 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Property Listing
 
-## Getting Started
+Next.js (Page Router) frontend for property search: listing with filters, sort, and pagination. Uses MUI and SSR.
 
-First, run the development server:
+## How to run
+
+**Quick verify:** From the repo root, run `npm install && npm run dev`, then open [http://localhost:3000](http://localhost:3000). (Without an API endpoint the page will show an error or empty list but should not crash.)
+
+1. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+2. **Configure the property API (required)**
+
+   The app fetches listings from an external API. Set one of these environment variables to the API base URL (e.g. from the [API spec](https://documenter.getpostman.com/view/28364478/2sB34bKNgU)):
+
+   - `PROPERTY_LISTING_ENDPOINT` (server-side), or  
+   - `NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT` (if you need it in the browser)
+
+   Example: create a `.env.local` in the project root:
+
+   ```bash
+   PROPERTY_LISTING_ENDPOINT=https://your-api-base-url.com/listings
+   ```
+
+3. **Start the dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000). The property listing page loads data from the API. Without a valid endpoint, the page may show an error or empty list.
+
+4. **Production build**
+
+   ```bash
+   npm run build
+   npm start
+   ```
+
+## Getting Started (development)
+
+Run the development server (after setting the API endpoint above):
 
 ```bash
 npm run dev

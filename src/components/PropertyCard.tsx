@@ -28,7 +28,7 @@ export default function PropertyCard({ property }: { property: any }) {
   };
 
   return (
-    <Card sx={{ maxWidth: 345 }}>
+    <Card sx={{ maxWidth: 345, width: "100%" }}>
       <CardMedia
         component="img"
         height="140"
@@ -45,10 +45,10 @@ export default function PropertyCard({ property }: { property: any }) {
             {formatPrice(price)}
           </Typography>
           <Typography variant='body2' color='text.secondary'>
-            {city}, {state}
+            {[city, state].filter(Boolean).join(", ") || "—"}
           </Typography>
 
-          {types && (
+          {types && types.length > 0 && types[0] && (
             <Chip label={types[0]} size='small' sx={{ width: "fit-content" }} />
           )}
         </Stack>

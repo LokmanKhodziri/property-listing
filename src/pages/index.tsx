@@ -11,11 +11,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Radio,
-  RadioGroup,
+  Checkbox,
+  FormGroup,
   Box,
 } from "@mui/material";
 import PropertyCard from "@/components/PropertyCard";
+import PropertyCardSkeleton from "@/components/PropertyCardSkeleton";
+import ErrorMessage from "@/components/ErrorMessage";
 
 const GridAny = Grid as any;
 
@@ -29,12 +31,12 @@ const PROPERTY_CATEGORIES = [
   { value: "others", label: "Others" },
 ];
 
-// sort options for dropdown
+// sort options: default per spec = earliest created date
 const SORT_OPTIONS = [
-  { value: "-price", label: "Price (high to low)" },
-  { value: "price", label: "Price (low to high)" },
+  { value: "createdAt", label: "Earliest created (default)" },
   { value: "-createdAt", label: "Newest first" },
-  { value: "createdAt", label: "Oldest first" },
+  { value: "price", label: "Price (low to high)" },
+  { value: "-price", label: "Price (high to low)" },
 ];
 
 export default function Home(props: any) {
@@ -44,35 +46,50 @@ export default function Home(props: any) {
   // local state for the filter form
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState("-price");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [searchName, setSearchName] = useState("");
+  const [sort, setSort] = useState("createdAt");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // sync form from url when user go back/forward or apply filter
   useEffect(() => {
     const q = router.query;
     setMinPrice((q.minPrice as string) || "");
     setMaxPrice((q.maxPrice as string) || "");
-    setCategory((q.category as string) || "all");
-    setSort((q.sort as string) || "-price");
+    const typesParam = (q.types as string) || "";
+    setSelectedTypes(typesParam ? typesParam.split(",").filter(Boolean) : []);
+    setSearchName((q.name as string) || "");
+    setSort((q.sort as string) || "createdAt");
     setCurrentPage(parseInt((q.page as string) || "1", 10));
+    setIsNavigating(false);
   }, [router.query]);
+
+  // bonus: search by name (client-side filter on current page results)
+  const nameLower = searchName.trim().toLowerCase();
+  const filteredProperties =
+    nameLower && properties && properties.length
+      ? properties.filter((p: any) => (p.name || "").toLowerCase().includes(nameLower))
+      : properties || [];
 
   // apply filters and go back to page 1
   const handleApplyFilters = () => {
+    setIsNavigating(true);
     const query: Record<string, string> = {
       page: "1",
-      sort: (router.query.sort as string) || "-price",
+      sort: (router.query.sort as string) || "createdAt",
     };
     if (minPrice) query.minPrice = minPrice;
     if (maxPrice) query.maxPrice = maxPrice;
-    if (category && category !== "all") query.category = category;
+    if (selectedTypes.length) query.types = selectedTypes.join(",");
+    if (searchName.trim()) query.name = searchName.trim();
     router.push({ pathname: "/", query });
   };
 
   // when user changes sort we go to page 1 so results make sense
   const handleSortChange = (newSort: string) => {
     setSort(newSort);
+    setIsNavigating(true);
     const query: Record<string, string> = {
       ...router.query,
       page: "1",
@@ -84,31 +101,73 @@ export default function Home(props: any) {
   // pagination - keep current filters and sort, just change page
   const goToPage = (page: number) => {
     if (page < 1) return;
+    setIsNavigating(true);
     const query: Record<string, string> = {
       ...router.query,
       page: String(page),
-      sort: (router.query.sort as string) || "-price",
+      sort: (router.query.sort as string) || "createdAt",
     } as Record<string, string>;
     router.push({ pathname: "/", query });
   };
 
+  const handleTypeToggle = (type: string, checked: boolean) => {
+    if (checked) setSelectedTypes([...selectedTypes, type]);
+    else setSelectedTypes(selectedTypes.filter((t) => t !== type));
+  };
+
+  const handleRetry = () => router.push(router.asPath);
+
   if (error) {
-    return <Typography variant="h6">Failed to load properties</Typography>;
+    return (
+      <Container sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 } }}>
+        <Typography variant="h5" gutterBottom sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}>
+          Property Listings
+        </Typography>
+        <ErrorMessage onRetry={handleRetry} />
+      </Container>
+    );
   }
 
   return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
+    <Container sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, maxWidth: "lg" }}>
+      <Typography
+        variant="h4"
+        gutterBottom
+        sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" } }}
+      >
         Property Listings
       </Typography>
 
-      {/* filters */}
-      <Box sx={{ mb: 3, p: 2, border: "1px solid #eee", borderRadius: 1 }}>
+      {/* filters - stack on mobile */}
+      <Box
+        sx={{
+          mb: 3,
+          p: { xs: 1.5, sm: 2 },
+          border: "1px solid #eee",
+          borderRadius: 1,
+        }}
+      >
         <Typography variant="subtitle1" gutterBottom>
           Filters
         </Typography>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "flex-start" }}>
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            flexWrap: "wrap",
+            gap: 2,
+            alignItems: "flex-start",
+          }}
+        >
+          <TextField
+            label="Search by name"
+            size="small"
+            placeholder="Property name"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            sx={{ width: { xs: "100%", sm: 180 } }}
+          />
+          <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 180 } }}>
             <InputLabel id="sort-label">Sort by</InputLabel>
             <Select
               labelId="sort-label"
@@ -129,7 +188,7 @@ export default function Home(props: any) {
             size="small"
             value={minPrice}
             onChange={(e) => setMinPrice(e.target.value)}
-            sx={{ width: 120 }}
+            sx={{ width: { xs: "100%", sm: 120 } }}
           />
           <TextField
             label="Max price"
@@ -137,47 +196,78 @@ export default function Home(props: any) {
             size="small"
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
-            sx={{ width: 120 }}
+            sx={{ width: { xs: "100%", sm: 120 } }}
           />
-          <Box>
+          <Box sx={{ width: { xs: "100%", sm: "auto" } }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-              Property Category
+              Property type (multiple)
             </Typography>
-            <RadioGroup
-              row
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {PROPERTY_CATEGORIES.map((opt) => (
+            <FormGroup row sx={{ flexWrap: "wrap", gap: 0.5 }}>
+              {PROPERTY_CATEGORIES.filter((o) => o.value !== "all").map((opt) => (
                 <FormControlLabel
                   key={opt.value}
-                  value={opt.value}
-                  control={<Radio size="small" />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={selectedTypes.includes(opt.value)}
+                      onChange={(e) => handleTypeToggle(opt.value, e.target.checked)}
+                    />
+                  }
                   label={opt.label}
                 />
               ))}
-            </RadioGroup>
+            </FormGroup>
           </Box>
-          <Button variant="contained" onClick={handleApplyFilters}>
+          <Button
+            variant="contained"
+            onClick={handleApplyFilters}
+            sx={{ minHeight: 40, width: { xs: "100%", sm: "auto" } }}
+          >
             Apply filters
           </Button>
         </Box>
       </Box>
 
-      {!properties || !properties.length ? (
+      {/* loading skeleton */}
+      {isNavigating && (
+        <GridAny container spacing={3}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <GridAny key={i} xs={12} sm={6} md={4} component="div">
+              <PropertyCardSkeleton />
+            </GridAny>
+          ))}
+        </GridAny>
+      )}
+
+      {/* content */}
+      {!isNavigating && (!properties || !properties.length) && (
         <Typography variant="h6">No properties available</Typography>
-      ) : (
+      )}
+
+      {!isNavigating && properties && properties.length > 0 && filteredProperties.length === 0 && (
+        <Typography variant="h6">No properties match your search. Try a different name or filters.</Typography>
+      )}
+
+      {!isNavigating && properties && properties.length > 0 && filteredProperties.length > 0 && (
         <>
-          <GridAny container spacing={4}>
-            {properties.map((property: any) => (
-              <GridAny key={property.id} xs={12} sm={6} md={4} component={"div"}>
+          <GridAny container spacing={{ xs: 2, sm: 3, md: 4 }}>
+            {filteredProperties.map((property: any) => (
+              <GridAny key={property.id} xs={12} sm={6} md={4} component="div">
                 <PropertyCard property={property} />
               </GridAny>
             ))}
           </GridAny>
 
-          {/* prev next buttons */}
-          <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mt: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: 1,
+              mt: 3,
+              "& .MuiButton-root": { minHeight: 44, minWidth: 44 },
+            }}
+          >
             <Button
               variant="outlined"
               disabled={currentPage <= 1}
@@ -200,7 +290,12 @@ export async function getServerSideProps(context: any) {
   const endpointBase =
     process.env.PROPERTY_LISTING_ENDPOINT ||
     process.env.NEXT_PUBLIC_PROPERTY_LISTING_ENDPOINT;
-  const { page = "1", sort = "-price", minPrice, maxPrice, category } = context.query || {};
+
+  if (!endpointBase || typeof endpointBase !== "string") {
+    return { props: { properties: [], error: true } };
+  }
+
+  const { page = "1", sort = "createdAt", minPrice, maxPrice, types: typesParam } = context.query || {};
 
   // api wants page and sort in url only
   let url: string;
@@ -213,14 +308,17 @@ export async function getServerSideProps(context: any) {
     url = `${endpointBase}${endpointBase && endpointBase.includes("?") ? "&" : "?"}page=${encodeURIComponent(String(page))}&sort=${encodeURIComponent(String(sort))}`;
   }
 
-  // filters go in body
+  // filters go in body; API accepts multiple property types (categories)
   const body: Record<string, unknown> = {
     section: "sale",
   };
-  const categoryVal = category && String(category).toLowerCase();
-  if (categoryVal && categoryVal !== "all") {
-    body.categories = [categoryVal];
-  }
+  const typesList = typesParam
+    ? String(typesParam)
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
+  if (typesList.length) body.categories = typesList;
   const minPriceNum = minPrice ? parseInt(String(minPrice), 10) : undefined;
   const maxPriceNum = maxPrice ? parseInt(String(maxPrice), 10) : undefined;
   if (minPriceNum != null && !Number.isNaN(minPriceNum)) body.minPrice = minPriceNum;
