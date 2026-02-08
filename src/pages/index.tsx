@@ -81,11 +81,13 @@ export default function Home(props: any) {
     router.push({ pathname: "/", query });
   };
 
+  // pagination - keep current filters and sort, just change page
   const goToPage = (page: number) => {
     if (page < 1) return;
     const query: Record<string, string> = {
       ...router.query,
       page: String(page),
+      sort: (router.query.sort as string) || "-price",
     } as Record<string, string>;
     router.push({ pathname: "/", query });
   };
