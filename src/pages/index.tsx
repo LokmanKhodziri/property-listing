@@ -129,14 +129,16 @@ export default function Home(props: any) {
   }
 
   return (
-    <Container sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, maxWidth: "lg" }}>
-      <Typography
-        variant="h4"
-        gutterBottom
-        sx={{ fontSize: { xs: "1.5rem", sm: "2rem", md: "2.125rem" } }}
-      >
+
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h4" gutterBottom fontWeight={600}>
         Property Listings
       </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Browse properties for sale across Malaysia.
+      </Typography>
+    </Box>
 
       {/* filters - stack on mobile */}
       <Box

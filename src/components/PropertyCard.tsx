@@ -28,7 +28,9 @@ export default function PropertyCard({ property }: { property: any }) {
   };
 
   return (
-    <Card sx={{ maxWidth: 345, width: "100%" }}>
+
+    <Card sx={{ maxWidth: 345, borderRadius: 2, overflow: "hidden", boxShadow: 1, transition: "transform 0.2s", "&:hover": { transform: "translateY(-5px)", boxShadow: 4 } }}>
+
       <CardMedia
         component="img"
         height="140"
@@ -36,7 +38,7 @@ export default function PropertyCard({ property }: { property: any }) {
         alt={name || "property image"}
         onError={onImgError}
       />
-      <CardContent>
+      <CardContent>S
         <Stack>
           <Typography gutterBottom variant='h5' component='div'>
             {name}
